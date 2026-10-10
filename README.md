@@ -162,6 +162,14 @@ you ever see words glued together, set `separator: "\n"`.
 `protocols` defaults to `openai` only — do **not** add `codex` or
 `openai-response`, because those formats *require* content arrays.
 
+`models` matches the model name CPA hands to the plugin, which is the
+**client-requested** name — *not* the provider-prefixed name that ends up in the
+upstream payload. A Claude Code request for `deepseek-v4.1-flash` routed through
+a provider reaches the plugin as `deepseek-v4.1-flash`, while the upstream
+payload carries `cline-pass/deepseek-v4.1-flash`. Scope on the former; the
+prefixed form is rejected as a client model name anyway
+(`unknown provider for model …`).
+
 Prefer scoping `models` to the upstream that actually drops array content. Every
 other upstream keeps receiving the (valid) array form, so this plugin stays a
 targeted workaround rather than a global behaviour change.

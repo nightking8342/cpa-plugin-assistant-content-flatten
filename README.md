@@ -138,18 +138,21 @@ Plugins are loaded at startup.
 | `models` | string[] | `[]` | Only rewrite these model names. `*` wildcards allowed. Empty = all models. |
 | `skip_models` | string[] | `[]` | Never rewrite these. Wins over `models`. |
 | `protocols` | string[] | `["openai"]` | Target formats (`to_format`) to rewrite. |
-| `separator` | string | `"\n"` | Join string for multiple text parts. `""` concatenates. |
+| `separator` | string | `""` | Join string for multiple text parts. Empty concatenates, matching CPA. |
 | `debug` | bool | `false` | Log every rewrite to stderr. |
 
 `enabled` and `priority` are host-managed; unknown keys are ignored.
 
-### Why the default separator is `"\n"`
+### Why the default separator is `""`
 
-CPA's Gemini and Interactions translators concatenate text parts with **no**
-separator. That is fine when a turn has one text part, but a Claude assistant
-turn can carry two text blocks around a tool call (`"pre"` / `"post"`), and
-concatenating those yields `"prepost"`. A newline is the safer default. Set
-`separator: ""` to reproduce CPA's concatenation exactly.
+CPA's Gemini (`onlyTextContent`) and Interactions (`textOnly`) translators
+concatenate text parts with **no** separator when they flatten text-only
+content, so this plugin defaults to the same thing and produces byte-identical
+output to the paths CPA already handles itself.
+
+The one case to watch: a Claude assistant turn can carry two text blocks around
+a tool call (`"pre"` / `"post"`), and concatenating those yields `"prepost"`. If
+you ever see words glued together, set `separator: "\n"`.
 
 ### Scoping advice
 

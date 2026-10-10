@@ -7,8 +7,8 @@ func TestParsePluginConfigDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parsePluginConfig() error = %v", err)
 	}
-	if got := cfg.separator(); got != "\n" {
-		t.Fatalf("separator() = %q, want %q", got, "\n")
+	if got := cfg.separator(); got != "" {
+		t.Fatalf("separator() = %q, want empty (CPA-compatible concatenation)", got)
 	}
 	if got := cfg.protocols(); len(got) != 1 || got[0] != "openai" {
 		t.Fatalf("protocols() = %v, want [openai]", got)
@@ -39,12 +39,12 @@ func TestParsePluginConfigRejectsBadYAML(t *testing.T) {
 }
 
 func TestPluginConfigSeparatorOverride(t *testing.T) {
-	cfg, err := parsePluginConfig([]byte("separator: \"\"\n"))
+	cfg, err := parsePluginConfig([]byte("separator: \"\\n\"\n"))
 	if err != nil {
 		t.Fatalf("parsePluginConfig() error = %v", err)
 	}
-	if got := cfg.separator(); got != "" {
-		t.Fatalf("separator() = %q, want empty", got)
+	if got := cfg.separator(); got != "\n" {
+		t.Fatalf("separator() = %q, want a newline", got)
 	}
 }
 

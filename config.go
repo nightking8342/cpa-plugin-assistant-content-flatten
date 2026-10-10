@@ -9,13 +9,15 @@ import (
 const (
 	// defaultSeparator joins multiple text parts of one assistant message.
 	//
-	// CPA's own Gemini and Interactions translators concatenate text parts with
-	// no separator. That is fine when a turn has a single text part, but a
-	// Claude assistant turn can legitimately carry two text blocks around a
-	// tool call ("pre" / "post"); concatenating those would produce "prepost".
-	// A newline is the safer default. Set `separator: ""` in the plugin config
-	// to reproduce CPA's concatenation behavior exactly.
-	defaultSeparator = "\n"
+	// Empty means direct concatenation, which is exactly what CPA's own Gemini
+	// (`onlyTextContent`) and Interactions (`textOnly`) translators do when they
+	// flatten text-only content. Matching them keeps this plugin's output
+	// byte-identical to the paths CPA already handles itself.
+	//
+	// Caveat: a Claude assistant turn can carry two text blocks around a tool
+	// call ("pre" / "post"), and concatenating those yields "prepost". Set
+	// `separator: "\n"` in the plugin config if that ever shows up.
+	defaultSeparator = ""
 
 	// defaultProtocol is the only target format whose assistant content has to
 	// be a string. Other formats either require content arrays (OpenAI

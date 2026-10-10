@@ -84,6 +84,8 @@ func TestFlattenAssistantContentKeepsMultimodalArrays(t *testing.T) {
 func TestFlattenAssistantContentJoinsMultipleTextParts(t *testing.T) {
 	payload := `{"messages":[{"role":"assistant","content":[{"type":"text","text":"pre"},{"type":"text","text":"post"}],"tool_calls":[{"id":"c","type":"function","function":{"name":"f","arguments":"{}"}}]}]}`
 
+	// Default separator is "" so the output matches CPA's own Gemini /
+	// Interactions flattening byte for byte.
 	out, stats, err := flattenAssistantContent([]byte(payload), defaultSeparator)
 	if err != nil {
 		t.Fatalf("flattenAssistantContent() error = %v", err)
@@ -91,19 +93,23 @@ func TestFlattenAssistantContentJoinsMultipleTextParts(t *testing.T) {
 	if stats.Flattened != 1 {
 		t.Fatalf("flattened = %d, want 1", stats.Flattened)
 	}
-	if got, want := gjson.GetBytes(out, "messages.0.content").String(), "pre\npost"; got != want {
+	if got, want := gjson.GetBytes(out, "messages.0.content").String(), "prepost"; got != want {
 		t.Fatalf("content = %q, want %q", got, want)
 	}
 	if !gjson.GetBytes(out, "messages.0.tool_calls").Exists() {
 		t.Fatal("tool_calls were dropped while flattening text")
 	}
 
-	concatenated, _, err := flattenAssistantContent([]byte(payload), "")
+	// Opt-in newline separator for turns whose text blocks must stay apart.
 	if err != nil {
 		t.Fatalf("flattenAssistantContent() error = %v", err)
 	}
-	if got, want := gjson.GetBytes(concatenated, "messages.0.content").String(), "prepost"; got != want {
-		t.Fatalf("content with empty separator = %q, want %q", got, want)
+	newlined, _, err := flattenAssistantContent([]byte(payload), "\n")
+	if err != nil {
+		t.Fatalf("flattenAssistantContent() error = %v", err)
+	}
+	if got, want := gjson.GetBytes(newlined, "messages.0.content").String(), "pre\npost"; got != want {
+		t.Fatalf("content with newline separator = %q, want %q", got, want)
 	}
 }
 
@@ -116,7 +122,7 @@ func TestFlattenAssistantContentAcceptsBareStringParts(t *testing.T) {
 	if stats.Flattened != 1 {
 		t.Fatalf("flattened = %d, want 1", stats.Flattened)
 	}
-	if got, want := gjson.GetBytes(out, "messages.0.content").String(), "a\nb"; got != want {
+	if got, want := gjson.GetBytes(out, "messages.0.content").String(), "ab"; got != want {
 		t.Fatalf("content = %q, want %q", got, want)
 	}
 }

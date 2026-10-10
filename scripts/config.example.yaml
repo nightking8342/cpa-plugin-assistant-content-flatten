@@ -27,9 +27,9 @@ plugins:
       protocols: ["openai"]
 
       # Join string for messages with more than one text part.
-      # Defaults to a newline; set to "" to concatenate like CPA's own
-      # Gemini/Interactions translators do.
-      # separator: "\n"
+      # Defaults to "" (concatenate), matching CPA's own Gemini/Interactions
+      # translators. Set to "\n" if a turn's text blocks get glued together.
+      # separator: ""
 
       # Log every rewrite to stderr.
       debug: false

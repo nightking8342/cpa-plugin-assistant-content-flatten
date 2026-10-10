@@ -8,12 +8,16 @@ import (
 )
 
 // Plugin identity shown in CPA's management UI. Change these before publishing.
+//
+// All four of Name, Version, Author and GitHubRepository must be non-empty:
+// the host rejects a plugin whose registration is missing any of them
+// (internal/pluginhost/host.go, validPlugin).
 const (
 	pluginID      = "assistant-content-flatten"
 	pluginName    = "Assistant Content Flatten"
 	pluginVersion = "0.1.0"
 	pluginAuthor  = "nightking8342"
-	pluginRepoURL = ""
+	pluginRepoURL = "https://github.com/nightking8342/cpa-plugin-assistant-content-flatten"
 )
 
 // envelope is the response wrapper every ABI method returns.

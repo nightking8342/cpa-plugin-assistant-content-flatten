@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/tidwall/gjson"
@@ -72,6 +73,32 @@ func callNormalize(t *testing.T, p *plugin, toFormat, model string, body string)
 
 func TestRegisterAdvertisesRequestNormalizer(t *testing.T) {
 	registerPlugin(t, "")
+}
+
+// The host rejects a registration that is missing any of Name, Version, Author
+// or GitHubRepository (internal/pluginhost/host.go, validPlugin), and it
+// rejects one that advertises no capability. Leaving GitHubRepository empty is
+// an easy mistake that only shows up as a warn line in the host log, so pin it.
+func TestRegistrationSatisfiesHostValidation(t *testing.T) {
+	reg := pluginRegistration()
+	if strings.TrimSpace(reg.Metadata.Name) == "" {
+		t.Fatal("metadata.Name is required by the host")
+	}
+	if strings.TrimSpace(reg.Metadata.Version) == "" {
+		t.Fatal("metadata.Version is required by the host")
+	}
+	if strings.TrimSpace(reg.Metadata.Author) == "" {
+		t.Fatal("metadata.Author is required by the host")
+	}
+	if strings.TrimSpace(reg.Metadata.GitHubRepository) == "" {
+		t.Fatal("metadata.GitHubRepository is required by the host")
+	}
+	if !reg.Capabilities.RequestNormalizer {
+		t.Fatal("at least one capability must be advertised")
+	}
+	if len(reg.Metadata.ConfigFields) == 0 {
+		t.Fatal("expected the documented config fields to be advertised")
+	}
 }
 
 func TestNormalizeRoundTripFlattensAssistantContent(t *testing.T) {

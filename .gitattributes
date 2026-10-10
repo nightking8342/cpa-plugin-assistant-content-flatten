@@ -1,0 +1,9 @@
+# Keep everything LF so the Makefile and CI shell steps work unchanged on
+# Windows checkouts. build.ps1 is CRLF for PowerShell.
+* text=auto eol=lf
+
+*.ps1 text eol=crlf
+
+*.dll binary
+*.so binary
+*.dylib binary

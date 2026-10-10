@@ -1,0 +1,5 @@
+dist/
+*.dll
+*.so
+*.dylib
+*.h

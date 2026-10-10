@@ -1,0 +1,35 @@
+# Paste into CPA's config.yaml.
+#
+# The plugin binary must sit at <plugins.dir>/<goos>/<goarch>/<id>.<ext>
+# (e.g. plugins/linux/amd64/assistant-content-flatten.so). The plugin id is
+# derived from the file name, so the key below must match it.
+
+plugins:
+  enabled: true
+  dir: "plugins"
+  configs:
+    assistant-content-flatten:
+      enabled: true
+      priority: 1
+
+      # Rewrite only these models. "*" wildcards allowed. Empty = all models.
+      # Strongly recommended: restrict this to the models served by the upstream
+      # that actually drops array content.
+      models: []
+      #   - "deepseek-*"
+
+      # Never rewrite these. Wins over `models`.
+      skip_models: []
+
+      # Target protocols to rewrite (CPA's to_format). Defaults to ["openai"].
+      # Do NOT add "codex"/"openai-response": those formats require content
+      # arrays.
+      protocols: ["openai"]
+
+      # Join string for messages with more than one text part.
+      # Defaults to a newline; set to "" to concatenate like CPA's own
+      # Gemini/Interactions translators do.
+      # separator: "\n"
+
+      # Log every rewrite to stderr.
+      debug: false

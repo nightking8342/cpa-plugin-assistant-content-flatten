@@ -1,0 +1,110 @@
+# Build plugin-store compatible archives on tag push.
+#
+# A C compiler is required for -buildmode=c-shared, which is why CI is the
+# practical way to produce binaries for every platform CPA supports.
+#
+# Artifacts follow the plugin store convention:
+#   <id>_<version>_<goos>_<goarch>.zip   containing <id>.<ext> at the zip root
+#   checksums.txt
+
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to stamp into artifact names (e.g. 0.1.0)"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  PLUGIN_ID: assistant-content-flatten
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            ext: .so
+          - goos: linux
+            goarch: arm64
+            ext: .so
+          - goos: darwin
+            goarch: amd64
+            ext: .dylib
+          - goos: darwin
+            goarch: arm64
+            ext: .dylib
+          - goos: windows
+            goarch: amd64
+            ext: .dll
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        run: CGO_ENABLED=0 go test ./...
+
+      # Linux targets are built against glibc (the runner is Ubuntu) so the
+      # library loads in CPA's Debian-based runtime image.
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "1"
+        run: |
+          go build -trimpath -buildmode=c-shared -ldflags "-s -w" \
+            -o "${{ env.PLUGIN_ID }}${{ matrix.ext }}" .
+
+      - name: Package
+        id: package
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          ZIP="${{ env.PLUGIN_ID }}_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}.zip"
+          rm -f *.h
+          zip "$ZIP" "${{ env.PLUGIN_ID }}${{ matrix.ext }}"
+          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.zip }}
+          path: ${{ steps.package.outputs.zip }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum *.zip > checksums.txt
+
+      - name: Publish
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.zip
+            dist/checksums.txt

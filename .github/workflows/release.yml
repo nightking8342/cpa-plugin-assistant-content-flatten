@@ -1,11 +1,11 @@
-# Build plugin-store compatible archives on tag push.
+# Build plugin binaries for every platform CPA runs on, on tag push.
 #
-# A C compiler is required for -buildmode=c-shared, which is why CI is the
-# practical way to produce binaries for every platform CPA supports.
+# -buildmode=c-shared needs a C compiler **for the target platform**, and Go
+# cannot cross-compile cgo without a matching cross toolchain. So each target is
+# built on a native runner; do not collapse this matrix onto ubuntu.
 #
-# Artifacts follow the plugin store convention:
-#   <id>_<version>_<goos>_<goarch>.zip   containing <id>.<ext> at the zip root
-#   checksums.txt
+# Artifacts: <id>_<version>_<goos>_<goarch>.zip containing <id>.<ext> at the zip
+# root, plus checksums.txt.
 
 name: release
 
@@ -27,7 +27,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
@@ -35,18 +35,23 @@ jobs:
           - goos: linux
             goarch: amd64
             ext: .so
+            runner: ubuntu-24.04
           - goos: linux
             goarch: arm64
             ext: .so
+            runner: ubuntu-24.04-arm
           - goos: darwin
             goarch: amd64
             ext: .dylib
+            runner: macos-15-intel
           - goos: darwin
             goarch: arm64
             ext: .dylib
+            runner: macos-15
           - goos: windows
             goarch: amd64
             ext: .dll
+            runner: windows-2025
     steps:
       - uses: actions/checkout@v4
 
@@ -56,9 +61,11 @@ jobs:
 
       - name: Test
         run: CGO_ENABLED=0 go test ./...
+        shell: bash
 
-      # Linux targets are built against glibc (the runner is Ubuntu) so the
-      # library loads in CPA's Debian-based runtime image.
+      # Native build: GOOS/GOARCH match the runner, so the host C compiler is the
+      # right one. Linux targets are built against glibc, which is what CPA's
+      # Debian-based runtime image needs (a musl build fails to dlopen there).
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
@@ -67,20 +74,29 @@ jobs:
         run: |
           go build -trimpath -buildmode=c-shared -ldflags "-s -w" \
             -o "${{ env.PLUGIN_ID }}${{ matrix.ext }}" .
+        shell: bash
 
+      # pwsh is preinstalled on every GitHub runner and Compress-Archive is
+      # portable; the Windows runner has neither `zip` nor a POSIX shell.
       - name: Package
         id: package
+        shell: pwsh
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-          else
-            VERSION="${GITHUB_REF_NAME#v}"
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          ZIP="${{ env.PLUGIN_ID }}_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}.zip"
-          rm -f *.h
-          zip "$ZIP" "${{ env.PLUGIN_ID }}${{ matrix.ext }}"
-          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+          if ($env:GITHUB_REF_NAME -like 'v*') {
+            $version = $env:GITHUB_REF_NAME.Substring(1)
+          } else {
+            $version = '${{ github.event.inputs.version }}'
+          }
+          if (-not $version) { throw 'no version: push a v* tag or set the workflow_dispatch input' }
+
+          $id  = '${{ env.PLUGIN_ID }}'
+          $zip = "${id}_${version}_${{ matrix.goos }}_${{ matrix.goarch }}.zip"
+
+          Remove-Item -Force -ErrorAction SilentlyContinue *.h
+          Compress-Archive -Path "$id${{ matrix.ext }}" -DestinationPath $zip -Force
+
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "zip=$zip"         | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - uses: actions/upload-artifact@v4
         with:

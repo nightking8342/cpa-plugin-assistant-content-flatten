@@ -195,9 +195,19 @@ make docker-linux-arm64
 ### Building every platform in CI
 
 [`.github/workflows/release.yml`](.github/workflows/release.yml) builds
-linux/darwin/windows (amd64 + arm64) on a tag push and publishes
-plugin-store-compatible archives plus `checksums.txt`. Use
-`workflow_dispatch` to produce the same artifacts without tagging.
+linux/darwin/windows (amd64 + arm64) on a tag push and publishes one zip per
+target plus `checksums.txt`. Use `workflow_dispatch` to produce the same
+artifacts without tagging.
+
+Each target is built on a **native runner** (`ubuntu-24.04`, `ubuntu-24.04-arm`,
+`macos-15`, `macos-15-intel`, `windows-2025`). This is not stylistic:
+`-buildmode=c-shared` needs a C compiler *for the target platform*, and Go
+cannot cross-compile cgo without a matching cross toolchain. An earlier version
+of this workflow built everything on `ubuntu-latest`; only `linux/amd64`
+succeeded and the other four legs failed in the build step.
+
+Packaging uses `pwsh` + `Compress-Archive` rather than `zip`, because the
+Windows runner has neither `zip` nor a POSIX shell.
 
 This is the practical route when the machine that runs CPA has no C compiler.
 

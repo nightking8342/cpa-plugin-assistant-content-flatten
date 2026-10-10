@@ -228,7 +228,7 @@ This is the practical route when the machine that runs CPA has no C compiler.
 ### Development
 
 ```bash
-CGO_ENABLED=0 go test ./...    # 26 tests / 51 cases, no C compiler required
+CGO_ENABLED=0 go test ./...    # 27 tests / 54 cases, no C compiler required
 CGO_ENABLED=0 go vet ./...
 ```
 

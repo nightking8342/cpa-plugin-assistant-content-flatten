@@ -3,3 +3,6 @@ dist/
 *.so
 *.dylib
 *.h
+
+# Deployment specifics (hosts, paths, keys) stay local — see AGENTS.md.
+*.local.md

@@ -69,6 +69,9 @@ Deliberately **not** touched:
 
 - any array containing a non-text part (`image_url`, `file`, `input_audio`,
   `video_url`, `refusal`, …) — multimodal payloads keep their semantics;
+- any text part carrying a key beyond `type` and `text` — CPA's
+  `AttachMessageCacheControl` hoists a message-level `cache_control` onto the
+  last content part, and flattening it would silently drop the cache breakpoint;
 - `output_text` parts — that is the OpenAI **Responses** shape, where arrays are
   the required form;
 - `reasoning_content` (a string already) and `tool_calls`;

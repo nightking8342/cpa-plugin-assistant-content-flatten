@@ -120,12 +120,22 @@ func flattenAssistantContent(payload []byte, separator string) ([]byte, flattenS
 // Everything else — `image_url`, `file`, `input_audio`, `video_url`, `refusal`,
 // and notably `output_text` (a Responses-format part, where content arrays are
 // the required shape) — is treated as non-text so the array is left alone.
+//
+// A part carrying anything beyond `type` and `text` is also rejected. CPA's
+// AttachMessageCacheControl hoists a message-level `cache_control` onto the last
+// content part, and flattening that part into a plain string would silently drop
+// the cache breakpoint. Measured against real /v1/messages traffic this never
+// happens on assistant turns, but a compatibility shim must not discard data it
+// does not understand.
 func assistantTextPart(part gjson.Result) (string, bool) {
 	switch part.Type {
 	case gjson.String:
 		return part.String(), true
 	case gjson.JSON:
 		if !part.IsObject() {
+			return "", false
+		}
+		if !hasOnlyKeys(part, "type", "text") {
 			return "", false
 		}
 		switch part.Get("type").String() {
@@ -138,4 +148,20 @@ func assistantTextPart(part gjson.Result) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// hasOnlyKeys reports whether an object carries no keys outside allowed.
+func hasOnlyKeys(object gjson.Result, allowed ...string) bool {
+	ok := true
+	object.ForEach(func(key, _ gjson.Result) bool {
+		name := key.String()
+		for _, candidate := range allowed {
+			if name == candidate {
+				return true
+			}
+		}
+		ok = false
+		return false
+	})
+	return ok
 }

@@ -63,6 +63,10 @@ func TestFlattenAssistantContentKeepsMultimodalArrays(t *testing.T) {
 		"output_text":  `{"role":"assistant","content":[{"type":"output_text","text":"responses shape"}]}`,
 		"refusal":      `{"role":"assistant","content":[{"type":"refusal","refusal":"no"}]}`,
 		"text_no_body": `{"role":"assistant","content":[{"type":"text"}]}`,
+		// CPA hoists a message-level cache_control onto the last content part;
+		// flattening it would silently drop the cache breakpoint.
+		"cache_control": `{"role":"assistant","content":[{"type":"text","text":"cached","cache_control":{"type":"ephemeral"}}]}`,
+		"extra_key":     `{"role":"assistant","content":[{"type":"text","text":"x","index":0}]}`,
 	}
 	for name, message := range cases {
 		t.Run(name, func(t *testing.T) {
